@@ -6,6 +6,8 @@ This independent engineering project investigates how an active tuned mass dampe
 
 **11.41%** lower peak displacement with PID · **10.53%** with LQR · **~14%** lower RMS actuator force with LQR than PID.
 
+These headlines describe the original matched controller pair. The new [gain-search experiment](#gain-search-experiment) compares how the tuning method affects force and displacement.
+
 The displacement reductions use the passive TMD as the baseline for a 4 mm, 1.2 Hz sinusoidal road input.
 
 [![Run in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/IhsanSA/atmd-quarter-car-control/blob/main/ATMD_Quarter_Car_Colab.ipynb)
@@ -34,6 +36,31 @@ The displacement reductions use the passive TMD as the baseline for a 4 mm, 1.2 
 - **Frequency response:** Within the studied range of 0.55–2.50 Hz, continuous linear road-to-body gain was lower than the passive TMD over approximately 0.885–1.700 Hz for PID and 0.763–1.938 Hz for LQR.
 
 RMS actuator force is not a direct measure of electrical energy consumption. Controller ranking depends on the road input, model parameters, controller settings, and physical limits.
+
+## Gain-search experiment
+
+**Research question.** At a common search budget and a 5% mean peak-reduction target, which method finds the lowest actuator force, and how do its frozen gains perform on other roads?
+
+Grid search, differential evolution (DE), and constrained Bayesian optimization (BO) each receive 64 candidate evaluations per controller family. All methods share the original gain set as a warm start. A candidate must pass the physical screens and achieve the design target across three equally weighted roads. Each method selects its lowest-force feasible candidate. The passive TMD is the displacement reference on every road.
+
+| Family | Tuning method | Design RMS force (N) | Design reduction (%) | Test RMS force (N) | Test reduction (%) |
+|---|---|---:|---:|---:|---:|
+| PID | Grid | 1.610 | 5.80 | 4.711 | 2.99 |
+| PID | DE | 2.043 | 6.89 | 6.224 | 3.09 |
+| PID | BO | 1.355 | 5.13 | 3.744 | 2.81 |
+| LQR | Grid | 1.636 | 5.90 | 6.601 | 4.01 |
+| LQR | DE | 1.692 | 5.73 | 7.021 | 4.07 |
+| LQR | BO | 1.228 | 5.00 | 4.408 | 3.27 |
+
+**Answer.** BO reaches the common design target at the lowest median force. Its force advantage persists on the nine evaluation roads, with a smaller mean peak reduction. Each test entry first averages a frozen controller’s nine scenario metrics, then takes the median over three optimizer seeds for DE and BO. Grid is deterministic.
+
+Across 2,048 shared uncertainty draws, representative BO gains beat the passive TMD in 47.6% of PID cases and 88.5% of LQR cases. These fractions depend on the seven specified input ranges.
+
+![Search convergence and projection of sampled nondominated gain sets](results/optimizer-comparison.png)
+
+**Reproduce.** Run the notebook through §12. It prints the tuning parameters, selected LQR feedback vector, candidate counts, seed-level timing, frequency bands, and Sobol estimates. The original matched-pair analysis in §§4–11 provides the comparison used in the historical results below.
+
+[Selected gain sets](results/selected.csv) · [Per-seed results](results/runs.csv) · [All test scenarios](results/holdout.csv) · [Uncertainty results](results/uncertainty.csv) · [Representative gains and frequency bands](results/response.csv)
 
 ## System Architecture
 
@@ -82,7 +109,7 @@ The active configurations use one controller at a time.
 
 An independent numerical recheck reran all 36 evaluation trajectories across nine scenarios and four configurations. All 360 displayed table fields agreed at the notebook's reported precision. Re-evaluation of 276 controller candidates across two training scenarios reproduced the selected PID and LQR gains. The nominal frequency-response benefit intervals were also reproduced.
 
-[Read the numerical recheck and reproduce it](verification/README.md). This is a separate JavaScript numerical audit of the saved Python model, not a new execution of the entire Python notebook. The 27,648-run Monte Carlo batch and published reference-case checks are from the recorded notebook run.
+[Read the numerical recheck and reproduce it](verification/README.md). This is a separate JavaScript numerical audit of the saved Python model, not a new execution of the entire Python notebook. The Python notebook was subsequently executed through the original reference-case tests and the full 27,648-run baseline Monte Carlo experiment. Section 12 adds a separate Python comparison of optimized gains.
 
 ## Reproduce the Study
 
